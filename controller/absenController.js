@@ -18,4 +18,6 @@ const getHistoriAbsensi = async (req, res) => {
   }
 };
 
+const getJadwalAbsensi = async (req, res) => {};
+
 module.exports = { getHistoriAbsensi };

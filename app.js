@@ -16,6 +16,8 @@ app.use((req, res, next) => {
   console.log(req.body);
   next();
 });
+
+app.use(middleware.setLocalTime);
 // app.use(middleware.checkToken);
 
 app.get("/", (req, res) => {

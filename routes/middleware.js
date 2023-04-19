@@ -3,6 +3,8 @@ const { rateLimit } = require("express-rate-limit");
 const { response } = require("../utils/response");
 const jwt = require("jsonwebtoken");
 const { dec } = require("../utils/crypt");
+const db = require("../config/db.config");
+const db2 = require("../config/db2.config");
 
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 menit
@@ -27,4 +29,11 @@ const checkToken = (req, res, next) => {
   }
 };
 
-module.exports = { limiter, checkToken };
+const setLocalTime = async (req, res, next) => {
+  await db.query(`SET @@session.time_zone = "+07:00"`);
+  await db2.query(`SET @@session.time_zone = "+07:00"`);
+
+  next();
+};
+
+module.exports = { limiter, checkToken, setLocalTime };
