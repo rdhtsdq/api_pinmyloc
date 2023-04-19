@@ -1,5 +1,4 @@
 require("dotenv").config();
-
 const { rateLimit } = require("express-rate-limit");
 const { response } = require("../utils/response");
 const jwt = require("jsonwebtoken");
@@ -11,26 +10,21 @@ const limiter = rateLimit({
   message: async (req, res) => response(res, false, "Akses ditolak", null),
 });
 
-module.exports = { limiter };
+const checkToken = (req, res, next) => {
+  if (req.headers["authorization"] != null) {
+    token = req.headers["authorization"].split(" ")[1];
+    console.log(token);
+    jwt.verify(token, process.env.SIGNATURE, (err, re) => {
+      if (err) {
+        console.log(err);
+        return response(res, false, "unauthenticated");
+      } else {
+        next();
+      }
+    });
+  } else {
+    return response(req, 0, 401, "unauthenticated");
+  }
+};
 
-// const checkToken = (req, res, next) => {
-//   if (req.headers["authorization"] != null) {
-//     token = req.headers["authorization"].split(" ")[1];
-//     jwt.verify(token, process.env.SECRET, (err, re) => {
-//       if (err) {
-//         return response(res, 0, 401, "unauthenticated", []);
-//       } else {
-//         var decoded = dec(token);
-//         if (decoded) {
-//           req.data = decoded;
-//         } else {
-//           return response(req, 0, 401, "unauthenticated", []);
-//         }
-//       }
-//     });
-//   } else {
-//     return response(req, 0, 401, "unauthenticated", []);
-//   }
-// };
-
-// module.exports = { limiter, checkToken };
+module.exports = { limiter, checkToken };

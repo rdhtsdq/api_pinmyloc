@@ -1,4 +1,4 @@
-const response = function (res, success, message, data, statusCode = 200) {
+const response = function (res, success, message, data = [], statusCode = 200) {
   var arr = {
     success: success,
     message: message,
