@@ -15,7 +15,6 @@ const limiter = rateLimit({
 const checkToken = (req, res, next) => {
   if (req.headers["authorization"] != null) {
     token = req.headers["authorization"].split(" ")[1];
-    console.log(token);
     jwt.verify(token, process.env.SIGNATURE, (err, re) => {
       if (err) {
         console.log(err);
@@ -25,14 +24,11 @@ const checkToken = (req, res, next) => {
       }
     });
   } else {
-    return response(req, 0, 401, "unauthenticated");
+    return response(res, false, "unauthenticated");
   }
 };
 
 const setLocalTime = async (req, res, next) => {
-  await db.query(`SET @@session.time_zone = "+07:00"`);
-  await db2.query(`SET @@session.time_zone = "+07:00"`);
-
   next();
 };
 

@@ -12,11 +12,10 @@ const auth = async (req, res) => {
 
     if (row.error != true) {
       var data = row.data[0];
-      console.log(data);
       jwt.sign(data, process.env.SIGNATURE, (err, token) => {
         if (err) {
           console.log(err);
-          return response(res, false, "Kendala Server", []);
+          return response(res, false, "Kendala Server");
         } else {
           data = { ...data, token };
           return response(res, true, `Halo ${row.data[0].nama}`, data);
