@@ -6,7 +6,11 @@ const absen = require("../controller/absenController");
 const task = require("../controller/taskController");
 const periode = require("../controller/periodeController");
 const shift = require("../controller/shiftController");
+const dinas = require("../controller/dinasController");
+const other = require("../controller/otherController");
 const { checkToken } = require("./middleware");
+
+// main path
 
 router.post("/login", auth.auth);
 
@@ -18,6 +22,14 @@ router.get("/task/all", checkToken, task.getTask);
 
 router.get("/shift/myshift", checkToken, shift.getMyShift);
 
-router.get("/periode", periode.periode);
+router.get("/dinas/getDinas", checkToken, dinas.getDinas);
+
+// other / components path
+
+router.get("/lokasi", checkToken, other.getLokasi);
+
+router.get("/periode", checkToken, periode.periode);
+
+router.get("/pegawai", checkToken, other.getPegawai);
 
 module.exports = router;

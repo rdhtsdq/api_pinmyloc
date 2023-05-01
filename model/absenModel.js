@@ -9,9 +9,29 @@ class DataAbsen {
    */
   async getDataHistoriAbsensi(id, koor, periode) {
     let result = { error: false, data: null };
-    result.error = true;
-    result.data = "Kendala server";
-    return result;
+    // result.error = true;
+    // result.data = "Kendala server";
+    // return result;
+
+    try {
+      const jadwal = await db.query(
+        `
+        select
+        COALESCE(e.jam_masuk,if(pr.tipe_jam_kerja = 'Shift',s.jam_masuk,if(weekday(CURRENT_DATE) = 6,pr.jam_masuk_2,pr.jam_masuk_1))) as masuk,
+        COALESCE(e.jam_keluar,if(pr.tipe_jam_kerja = 'Shift',s.jam_keluar,if(weekday(CURRENT_DATE) = 6,pr.jam_keluar_2,pr.jam_keluar_1))) as pulang,
+        COALESCE(ls.tgl,e.tgl,CURRENT_DATE) as tgl,
+        pr.tgl_awal,
+        pr.tgl_akhir
+        from
+          pegawai p
+          left join pegawai_rule pr on p.id_perusahaan = pr.id_pegawai and p.id_koordinator = pr.id_koordinator
+          left join list_jadwal_shift ls on p.id_perusahaan = ls.id_pegawai and p.id_koordinator = ls.id_koordinator
+          left join list_shift s on ls.no_shift = s.no_shift and ls.id_koordinator = s.id_koordinator
+          left join list_event e on p.id_perusahaan = e.id_pegawai and e.id_koordinator = p.id_koordinator
+        where p.id_perusahaan = ${id} and p.id_koordinator = '${koor}'
+        `
+      );
+    } catch (jError) {}
   }
 
   /**
@@ -175,6 +195,7 @@ class DataAbsen {
             initialResponse.dOut.location = ab[0][0].locOut;
 
             result.data = initialResponse;
+            console.log(result.data);
             return result;
           } catch (err) {
             if (err) {
@@ -186,6 +207,7 @@ class DataAbsen {
           }
         } else {
           result.data = "Tidak ada jadwal kerja";
+          console.log(result.data);
           return result;
         }
       } catch (error) {

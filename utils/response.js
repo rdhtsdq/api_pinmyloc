@@ -9,17 +9,6 @@ const response = function (res, success, message, data = [], statusCode = 200) {
   res.end();
 };
 
-const response2 = (res, success, message, data) => {
-  var arr = {
-    success,
-    message,
-    data,
-  };
-
-  return res.json(arr);
-};
-
 module.exports = {
   response,
-  response2,
 };

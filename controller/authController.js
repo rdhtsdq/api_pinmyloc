@@ -10,17 +10,21 @@ const auth = async (req, res) => {
   } else {
     var row = await login(req.body.userid, req.body.password);
 
-    if (row.error != true) {
+    if (!row.error) {
       var data = row.data[0];
-      jwt.sign(data, process.env.SIGNATURE, (err, token) => {
-        if (err) {
-          console.log(err);
-          return response(res, false, "Kendala Server");
-        } else {
-          data = { ...data, token };
-          return response(res, true, `Halo ${row.data[0].nama}`, data);
-        }
-      });
+      if (!data) {
+        return response(res, false, "Userid atau password salah");
+      } else {
+        jwt.sign(data, process.env.SIGNATURE, (err, token) => {
+          if (err) {
+            console.log(err);
+            return response(res, false, "Kendala Server");
+          } else {
+            data = { ...data, token };
+            return response(res, true, `Halo ${row.data[0].nama}`, data);
+          }
+        });
+      }
     } else {
       return response(res, false, "Kendala Server", []);
     }

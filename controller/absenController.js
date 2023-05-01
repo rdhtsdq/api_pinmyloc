@@ -33,7 +33,7 @@ const getJadwalAbsensi = async (req, res) => {
     );
     if (data != undefined) {
       if (data.error != true) {
-        return response(res, true, "Data histori absensi", data.data);
+        return response(res, true, "jadwal absensi", data.data);
       } else {
         return response(res, false, "Kendala server");
       }
