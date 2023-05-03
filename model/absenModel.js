@@ -2,36 +2,78 @@ const db = require("../config/db.config");
 const db2 = require("../config/db2.config");
 class DataAbsen {
   /**
-   * Method get histori absensi
-   * @param {String} id id pegawai
-   * @param {String} koor id koordinator
-   * @param {String} periode periode absensi
+   *
+   * @param {String} id
+   * @param {String} start
+   * @param {String} end
+   * @returns
    */
-  async getDataHistoriAbsensi(id, koor, periode) {
+  async getDataAbsensiShift(id, start, end) {
     let result = { error: false, data: null };
-    // result.error = true;
-    // result.data = "Kendala server";
-    // return result;
 
     try {
-      const jadwal = await db.query(
+      const data = await db2.query(
         `
-        select
-        COALESCE(e.jam_masuk,if(pr.tipe_jam_kerja = 'Shift',s.jam_masuk,if(weekday(CURRENT_DATE) = 6,pr.jam_masuk_2,pr.jam_masuk_1))) as masuk,
-        COALESCE(e.jam_keluar,if(pr.tipe_jam_kerja = 'Shift',s.jam_keluar,if(weekday(CURRENT_DATE) = 6,pr.jam_keluar_2,pr.jam_keluar_1))) as pulang,
-        COALESCE(ls.tgl,e.tgl,CURRENT_DATE) as tgl,
-        pr.tgl_awal,
-        pr.tgl_akhir
-        from
-          pegawai p
-          left join pegawai_rule pr on p.id_perusahaan = pr.id_pegawai and p.id_koordinator = pr.id_koordinator
-          left join list_jadwal_shift ls on p.id_perusahaan = ls.id_pegawai and p.id_koordinator = ls.id_koordinator
-          left join list_shift s on ls.no_shift = s.no_shift and ls.id_koordinator = s.id_koordinator
-          left join list_event e on p.id_perusahaan = e.id_pegawai and e.id_koordinator = p.id_koordinator
-        where p.id_perusahaan = ${id} and p.id_koordinator = '${koor}'
+        SELECT
+          DATE_FORMAT(d.checktime,'%W,  %d %b %Y') as tgl,
+          IFNULL(d.lokasi,IF(d.checktime is not null,"FingerPrint","")) as lokasi,
+          DATE_FORMAT(d.checktime,'%H.%i') as waktu,
+          d.checktype,
+          DATE(d.checktime) as iso
+        FROM (
+          SELECT 
+        c.checktime,
+        c.checktype,
+        c.lokasi
+        FROM userinfo u LEFT JOIN checkinout c ON c.userid = u.userid WHERE u.badgenumber = ${id} 
+          AND DATE(c.checktime) BETWEEN DATE_ADD('${start}',INTERVAL -1 DAY) AND DATE_ADD('${end}',INTERVAL + 1 DAY) ORDER BY c.checktime DESC
+        ) d
         `
       );
-    } catch (jError) {}
+      result.data = data[0];
+      return result;
+    } catch (error) {
+      result.error = true;
+      result.data = error;
+      return result;
+    }
+  }
+
+  /**
+   *
+   * @param {String} id
+   * @param {String} start
+   * @param {String} end
+   * @returns
+   */
+  async getDataAbsensiFulltime(id, start, end) {
+    let result = { error: false, data: null };
+
+    try {
+      const data = await db2.query(
+        `
+        SELECT
+          DATE_FORMAT(d.checktime,'%W,  %d %b %Y') as tanggal,
+          IFNULL(DATE_FORMAT(GROUP_CONCAT(IF(d.checktype=0, checktime,null)),'%H:%i'), 'Absen') as tIn,
+          IFNULL(DATE_FORMAT(GROUP_CONCAT(IF(d.checktype=1, checktime,null)),'%H:%i'),  "-") as tOut,
+          IFNULL(SUBSTRING_INDEX(GROUP_CONCAT(IF(d.checktype = 0,d.lokasi,null)),",",1),"") as lIn,
+          IFNULL(SUBSTRING_INDEX(GROUP_CONCAT(IF(d.checktype = 1,d.lokasi,null)),",",1),"") as lOut
+        FROM (
+          SELECT 
+        c.checktime,
+        c.checktype,
+        c.lokasi
+        FROM userinfo u LEFT JOIN checkinout c ON c.userid = u.userid WHERE u.badgenumber = ${id} AND DATE(c.checktime) BETWEEN '${start}' AND '${end}' ORDER BY c.checktime DESC
+        ) d GROUP BY DATE(d.checktime) DESC
+        `
+      );
+      result.data = data[0];
+      return result;
+    } catch (error) {
+      result.error = true;
+      result.data = error;
+      return result;
+    }
   }
 
   /**
@@ -218,6 +260,43 @@ class DataAbsen {
           return result;
         }
       }
+    }
+  }
+
+  /**
+   *
+   * @param {String} id
+   * @returns
+   */
+  async getTipePegawai(id) {
+    let result = { error: false, data: null };
+    try {
+      const tipe = await db.query(
+        `select pr.tipe_jam_kerja,tgl_awal,tgl_akhir as tipe from pegawai_rule pr where pr.id_pegawai = ${id}`
+      );
+      result.data = tipe[0][0].tipe;
+      return result;
+    } catch (error) {
+      console.log(error);
+      result.error = true;
+      return result;
+    }
+  }
+
+  async getDataSHiftPegawai(id, koor) {
+    let result = { error: false, data: null };
+
+    try {
+      const data = await db2.query(
+        `
+        `
+      );
+      result.data = data[0];
+      return result;
+    } catch (error) {
+      result.error = true;
+      result.data = error;
+      return result;
     }
   }
 }
