@@ -283,12 +283,27 @@ class DataAbsen {
     }
   }
 
-  async getDataSHiftPegawai(id, koor) {
+  /**
+   *
+   * @param {String} id
+   * @param {String} koor
+   * @returns
+   */
+  async getDataSHiftPegawai(id, koor, start, end) {
     let result = { error: false, data: null };
 
     try {
       const data = await db2.query(
         `
+        SELECT
+        ljs.tgl,
+        ls.jam_masuk,
+        ls.jam_keluar
+        FROM list_jadwal_shift ljs JOIN
+        list_shift ls ON ljs.no_shift = ls.no_shift 
+        AND ljs.id_koordinator = ls.id_koordinator
+        WHERE ljs.id_pegawai = ${id} AND ljs.id_koordinator = ${koor} AND ljs.tgl BETWEEN '${start}' AND '${end}'
+        ORDER BY ljs.tgl
         `
       );
       result.data = data[0];
