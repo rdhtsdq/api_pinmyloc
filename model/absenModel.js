@@ -51,9 +51,10 @@ class DataAbsen {
 
     try {
       const data = await db2.query(
+        // DATE_FORMAT(d.checktime,'%W,  %d %b %Y') as tanggal,
         `
         SELECT
-          DATE_FORMAT(d.checktime,'%W,  %d %b %Y') as tanggal,
+          DATE(d.checktime) as tanggal,
           IFNULL(DATE_FORMAT(GROUP_CONCAT(IF(d.checktype=0, checktime,null)),'%H:%i'), 'Absen') as tIn,
           IFNULL(DATE_FORMAT(GROUP_CONCAT(IF(d.checktype=1, checktime,null)),'%H:%i'),  "-") as tOut,
           IFNULL(SUBSTRING_INDEX(GROUP_CONCAT(IF(d.checktype = 0,d.lokasi,null)),",",1),"") as lIn,
@@ -272,9 +273,9 @@ class DataAbsen {
     let result = { error: false, data: null };
     try {
       const tipe = await db.query(
-        `select pr.tipe_jam_kerja,tgl_awal,tgl_akhir as tipe from pegawai_rule pr where pr.id_pegawai = ${id}`
+        `select pr.tipe_jam_kerja as tipe,tgl_awal,tgl_akhir from pegawai_rule pr where pr.id_pegawai = ${id}`
       );
-      result.data = tipe[0][0].tipe;
+      result.data = tipe[0][0];
       return result;
     } catch (error) {
       console.log(error);

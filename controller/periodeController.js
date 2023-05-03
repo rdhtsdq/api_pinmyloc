@@ -18,7 +18,7 @@ const periode = (req, res) => {
     title: date.toLocaleString("ID", { month: "short", year: "numeric" }),
   });
 
-  for (var i = 0; i < 12; i++) {
+  for (var i = 0; i < 7; i++) {
     date = new Date(date.setMonth(date.getMonth() - 1));
 
     if (data[data.length - 1].id != formatDate(date)) {

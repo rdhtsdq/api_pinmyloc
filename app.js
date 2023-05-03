@@ -17,8 +17,9 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(cors());
+
 app.use(middleware.setLocalTime);
-// app.use(middleware.checkToken);
 
 app.get("/", (req, res) => {
   res.json({ msg: "asasasas" });

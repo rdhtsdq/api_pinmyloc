@@ -4,7 +4,7 @@ const DataAbsen = require("../model/absenModel");
 let dataAbsen = new DataAbsen();
 
 const getHistoriAbsensi = async (req, res) => {
-  const param = [id, koor, periode];
+  const param = ["id", "koor", "periode"];
   const kosong = param.find((p) => !req.query[p]);
 
   const query = req.query;
@@ -15,17 +15,35 @@ const getHistoriAbsensi = async (req, res) => {
     var tipe = await dataAbsen.getTipePegawai(query.id);
 
     if (!tipe.error) {
-      let start = query.periode + tipe.data.tgl_awal;
-      let end = query.periode + tipe.data.tgl_akhir;
+      let start;
+      let end;
+      let periode = query.periode.split("-");
 
-      if (tipe.data.tipe != "Shift") {
+      console.log(tipe.data);
+
+      if (tipe.data.tgl_awal > tipe.data.tgl_akhir) {
+        let newPeriode =
+          periode[0] +
+          "-" +
+          (parseInt(periode[1]) - 1).toString().padStart(2, "0");
+
+        start = newPeriode + "-" + tipe.data.tgl_akhir;
+        end = periode.join("-") + "-" + tipe.data.tgl_awal;
+      } else {
+        start = periode.join("-") + "-" + tipe.data.tgl_awal;
+        end = periode.join("-") + "-" + tipe.data.tgl_akhir;
+      }
+
+      if (tipe.data.tipe == "Shift") {
         var absen = await dataAbsen.getDataAbsensiShift(query.id, start, end);
+        return response(res, true, "");
       } else {
         var absen = await dataAbsen.getDataAbsensiFulltime(
           query.id,
           start,
           end
         );
+
         if (!absen.error) {
           return response(res, true, "Data Absensi Pegawai", absen.data);
         } else {
