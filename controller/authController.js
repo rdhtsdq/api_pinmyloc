@@ -26,6 +26,7 @@ const auth = async (req, res) => {
         });
       }
     } else {
+      console.log(row.data);
       return response(res, false, "Kendala Server", []);
     }
   }

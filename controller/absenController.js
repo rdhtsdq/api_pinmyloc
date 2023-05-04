@@ -53,17 +53,6 @@ const getHistoriAbsensi = async (req, res) => {
     } else {
       return response(res, false, "Kendala Server");
     }
-
-    // var data = await dataAbsen.getDataHistoriAbsensi(
-    //   req.query.id,
-    //   req.query.koor,
-    //   req.query.periode
-    // );
-    // if (data.error != true) {
-    //   return response(res, true, "data histori absensi");
-    // } else {
-    //   return response(res, false, "Kendala server");
-    // }
   }
 };
 
