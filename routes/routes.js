@@ -8,6 +8,7 @@ const periode = require("../controller/periodeController");
 const shift = require("../controller/shiftController");
 const dinas = require("../controller/dinasController");
 const other = require("../controller/otherController");
+const absen = require("../controller/izinController");
 const { checkToken } = require("./middleware");
 
 // main path
