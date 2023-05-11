@@ -8,7 +8,7 @@ const periode = require("../controller/periodeController");
 const shift = require("../controller/shiftController");
 const dinas = require("../controller/dinasController");
 const other = require("../controller/otherController");
-const absen = require("../controller/izinController");
+const izin = require("../controller/izinController");
 const { checkToken } = require("./middleware");
 
 // main path
@@ -24,6 +24,8 @@ router.get("/task/all", checkToken, task.getTask);
 router.get("/shift/myshift", checkToken, shift.getMyShift);
 
 router.get("/dinas/getDinas", checkToken, dinas.getDinas);
+
+router.get("/izin/type", checkToken, izin.getApproval);
 
 // other / components path
 

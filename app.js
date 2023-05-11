@@ -13,17 +13,18 @@ const app = express();
 app.use(express.json());
 app.use(middleware.limiter);
 app.use((req, res, next) => {
-  console.log(req.body);
+  const body = req.body;
+  const param = req.params;
+  const query = req.query;
+  const data = { body, param, query };
+
+  console.log(JSON.stringify(data));
   next();
 });
 
 app.use(cors());
 
 app.use(middleware.setLocalTime);
-
-app.get("/", (req, res) => {
-  res.json({ msg: "asasasas" });
-});
 
 app.use("/api/", require("./routes/routes"));
 
