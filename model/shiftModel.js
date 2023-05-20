@@ -37,7 +37,12 @@ class ShiftModel {
     }
   }
 
-  async getOtherShift(id, koor, date) {}
+  async getOtherShift(id, koor, date) {
+    let result = { error: false, data: null };
+
+    try {
+    } catch (e) {}
+  }
 }
 
 module.exports = ShiftModel;
