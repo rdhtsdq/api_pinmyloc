@@ -1,6 +1,20 @@
 const db = require("../config/db.config");
 const db2 = require("../config/db2.config");
 class DataAbsen {
+
+  /**
+   *
+   * @param {Date} date
+   */
+  getLocalIso(date) {
+    process.env.TZ = "Asia/Jakarta";
+    var z = date.getTimezoneOffset() * 60 * 1000;
+    var tLocal = date - z;
+    var localDate = new Date(tLocal);
+    var iso = localDate.toISOString().split(".")[0].replace("T", " ");
+    return iso;
+  }
+
   /**
    *
    * @param {String} id
@@ -314,6 +328,74 @@ class DataAbsen {
       result.data = error;
       return result;
     }
+  }
+
+  /**
+   * 
+   * @param {String} id 
+   * @param {String} koor 
+   * @param {number} type 
+   * @param {String} imageName 
+   * @param {String} coordinates 
+   * @param {String} location 
+   * @returns 
+   */
+  async check(id,koor,type,imageName,coordinates,location) {
+    let result = {error:false,data:null}
+    try {
+      const sn = await db.query(`select sn from pegawai_rule where id_pegawai = ${id}`)
+      const userid = await db2.query(`select from userinfo where badgenumber = ${id}`)
+
+      try {
+        await db2.query(`insert into checkinout set userid = ? , checktime = ? , checktype = ? , id_koordinator = ? , foto = ? , koordinat = ?,SN = ?,verifycode = 1, lokasi= ? `,
+        [userid[0][0].userid,this.getLocalIso(new Date()),type,koor,imageName,coordinates,sn[0][0].sn,location])
+        result.data = "Berhasil Melakukan absen"
+        return result
+      } catch (checkError) {
+        result.error = true
+        result.data = checkError 
+        return result
+      }
+    } catch (infoError) {
+      result.error = true
+        result.data = checkError 
+        return result
+    }
+  }
+
+  /**
+   * id
+   * @param {String} id 
+   */
+  async checkLocation(id) {
+    let result = {error:false,data:null}
+    try {
+      const location = await db.query(
+        `
+        select
+        p.foto,
+        r.name as lokasi_dinas,
+        ROUND(111.111	* DEGREES( ACOS( COS( RADIANS(lp.latitude1) ) * COS( RADIANS(-6.8911047) ) * COS( RADIANS(lp.longitude1) - RADIANS(107.5756415) ) + 	 SIN( RADIANS(lp.latitude1) ) * SIN( RADIANS(-6.8911047) ) ) ) * 1000, 2 ) AS jarak,
+        lp.lokasi as lokasi_absen
+        from pegawai p left join tb_dinas td on p.id_perusahaan = td.id_karyawan and td.tgl_akhir >= CURRENT_DATE 
+              AND td.status_approval = 'terima'
+              left join regencies r on td.lokasi = r.id
+              LEFT JOIN (
+                SELECT lokasi,SUBSTRING_INDEX(REPLACE(koordinat, ' ', ''), ',', 1) AS latitude1,SUBSTRING_INDEX(REPLACE(koordinat, ' ', ''), ',', -1) AS 				longitude1,id_koordinator FROM lokasi_perusahaan
+              ) lp ON p.id_koordinator = lp.id_koordinator
+        where p.id_perusahaan = '${id}'
+        HAVING jarak < 25;
+        `
+      )
+
+      result.data = location[0]
+      return result
+    } catch (error) {
+      result.data = error
+      result.error = true
+      return result
+    }
+    
   }
 }
 

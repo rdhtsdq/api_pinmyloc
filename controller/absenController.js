@@ -79,4 +79,17 @@ const getJadwalAbsensi = async (req, res) => {
   }
 };
 
+const check = async (req,res) => {
+  const param = ['id','koor','lat','long','lokasi']
+
+
+  await dataAbsen.checkLocation(req.body.id)
+  .then((d) => {
+
+  })
+  .catch((e) => {
+    return response(res,false,e)
+  })
+}
+
 module.exports = { getHistoriAbsensi, getJadwalAbsensi };

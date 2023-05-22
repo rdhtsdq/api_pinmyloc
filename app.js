@@ -16,7 +16,7 @@ app.use((req, res, next) => {
   const body = req.body;
   const param = req.params;
   const query = req.query;
-  const data = { body, param, query };
+  const data = { ...body, ...param, ...query };
 
   console.log(JSON.stringify(data));
   next();
