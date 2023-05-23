@@ -5,6 +5,7 @@ const connection = mysql.createPool({
   user: process.env.DB2_USER,
   password: process.env.DB2_PWD,
   database: process.env.DB2_NAME,
+  multipleStatements: true
 });
 
 module.exports = connection;

@@ -1,19 +1,21 @@
 const db = require("../config/db.config");
 const db2 = require("../config/db2.config");
-class DataAbsen {
 
-  /**
+/**
    *
    * @param {Date} date
    */
-  getLocalIso(date) {
-    process.env.TZ = "Asia/Jakarta";
-    var z = date.getTimezoneOffset() * 60 * 1000;
-    var tLocal = date - z;
-    var localDate = new Date(tLocal);
-    var iso = localDate.toISOString().split(".")[0].replace("T", " ");
-    return iso;
-  }
+function getLocalIso(date) {
+  process.env.TZ = "Asia/Jakarta";
+  var z = date.getTimezoneOffset() * 60 * 1000;
+  var tLocal = date - z;
+  var localDate = new Date(tLocal);
+  var iso = localDate.toISOString().split(".")[0].replace("T", " ");
+  return iso;
+}
+class DataAbsen {
+
+
 
   /**
    *
@@ -29,19 +31,36 @@ class DataAbsen {
       const data = await db2.query(
         `
         SELECT
-          DATE_FORMAT(d.checktime,'%W,  %d %b %Y') as tgl,
-          IFNULL(d.lokasi,IF(d.checktime is not null,"FingerPrint","")) as lokasi,
-          DATE_FORMAT(d.checktime,'%H.%i') as waktu,
-          d.checktype,
-          DATE(d.checktime) as iso
-        FROM (
-          SELECT 
-        c.checktime,
-        c.checktype,
-        c.lokasi
-        FROM userinfo u LEFT JOIN checkinout c ON c.userid = u.userid WHERE u.badgenumber = ${id} 
-          AND DATE(c.checktime) BETWEEN DATE_ADD('${start}',INTERVAL -1 DAY) AND DATE_ADD('${end}',INTERVAL + 1 DAY) ORDER BY c.checktime DESC
-        ) d
+          REPLACE(DATE_FORMAT(d.tgl,'%W,  %d %b %Y' ),'Peb','Feb') as tgl,
+          d.jam_masuk,
+          d.fpin,
+          IFNULL( DATE_FORMAT( c.checktime, '%H:%i' ),IF(CURRENT_TIMESTAMP > d.endShift,"Tidak Absen","Tunggu"))
+            as jam_keluar,
+            IFNULL(IF(LENGTH(c.lokasi) > 14,CONCAT(SUBSTR(c.lokasi,1,12),"..."),c.lokasi),IF(c.checktime = NULL,'',IF(c.koordinat = NULL AND c.lokasi = null,'Fingerprint',''))) AS fpout
+        FROM
+          (
+          SELECT
+            DATE( c.checktime ) AS tgl,
+            DATE_FORMAT( c.checktime, '%H:%i' ) AS jam_masuk,
+            IFNULL(IF(LENGTH(c.lokasi) > 14,CONCAT(SUBSTR(c.lokasi,1,12),"..."),c.lokasi),IF(c.koordinat is NULL OR c.koordinat = '','Fingerprint','')) AS fpin,
+            DATE_ADD( c.checktime, INTERVAL - 2 HOUR ) AS startShift,
+            DATE_ADD( c.checktime, INTERVAL + 18 HOUR ) AS endShift,
+            u.userid 
+          FROM
+            userinfo u
+            LEFT JOIN checkinout c ON u.userid = c.userid 
+          WHERE
+            u.badgenumber in (${data.ids})
+            AND c.checktype = 0 
+          ORDER BY
+            tgl DESC 
+          ) d
+          LEFT JOIN checkinout c ON d.userid = c.userid 
+          AND c.checktype = 1 
+          AND c.checktime BETWEEN d.startShift 
+          AND d.endShift
+          WHEREd.tgl BETWEEN '${data.awal}'  AND '${data.akhir}'
+          GROUP BY DATE(d.tgl) ORDER BY d.tgl DESC LIMIT 100
         `
       );
       result.data = data[0];
@@ -193,26 +212,30 @@ class DataAbsen {
       try {
         var rowJadwal = await db.query(
           `
-        SELECT
-          DATE_ADD(f.tIn,INTERVAL -2 HOUR) as start,
-          DATE_ADD(f.tOut,INTERVAL +6 HOUR ) as end
+          SELECT
+          f.start,
+          f.end,
+          f.tIn,
+          f.tOut
           FROM (
             SELECT
-              CONCAT(DATE_FORMAT(j.tgl,'%Y-%m-%d'),' ',j.tIn) as tIn,
-              IF(j.tIn >= j.tOut,CONCAT(DATE_FORMAT(j.next,'%Y-%m-%d')," ",j.tOut),CONCAT(DATE_FORMAT(j.tgl,'%Y-%m-%d')," ",j.tOut)) as tOut
+             IFNULL(DATE_FORMAT(DATE_ADD( CONCAT(DATE_FORMAT(j.tgl,'%Y-%m-%d'),' ',j.tIn),INTERVAL -2 hour),'%Y-%m-%d %H:%i'),DATE_FORMAT( CONCAT(DATE_FORMAT(j.tgl,'%Y-%m-%d'),' ',j.tIn - '02:00'),'%Y-%m-%d %H:%i')) as start,
+             IFNULL(DATE_FORMAT(DATE_ADD(CONCAT(if(j.tIn >= j.tOut, DATE_FORMAT(j.next,'%Y-%m-%d'),DATE_FORMAT(j.tgl,'%Y-%m-%d')), ' ', j.tOut), INTERVAL + 6 HOUR), '%Y-%m-%d %H:%i'), CONCAT(DATE_ADD(j.tgl,INTERVAL +1 DAY), ' ', DATE_FORMAT(ADDTIME(j.tOut, "06:00"),'%H:%i'))) as end,
+             j.tIn,
+              j.tOut
             FROM (
               SELECT
-              COALESCE(e.jam_masuk,IF(pr.tipe_jam_kerja = "Shift",ls.jam_masuk,IF(WEEKDAY(CURRENT_DATE) = 6,pr.jam_masuk_1,pr.jam_masuk_2))) as tIn,
-              COALESCE(a.time,e.jam_keluar,IF(pr.tipe_jam_kerja = "Shift",ls.jam_keluar,IF(WEEKDAY(CURRENT_DATE) = 6,pr.jam_keluar_1,pr.jam_keluar_2))) as tOut,
+              COALESCE(e.jam_masuk,IF(pr.tipe_jam_kerja = "Shift",ls.jam_masuk,IF(WEEKDAY(CURRENT_DATE) = 5,pr.jam_masuk_2,pr.jam_masuk_1))) as tIn,
+              COALESCE(a.time,e.jam_keluar,IF(pr.tipe_jam_kerja = "Shift",ls.jam_keluar,IF(WEEKDAY(CURRENT_DATE) = 5,pr.jam_keluar_2,pr.jam_keluar_1))) as tOut,
               IFNULL(ljs.tgl,CURRENT_DATE) as tgl,
               IFNULL(DATE_ADD(ljs.tgl,INTERVAL +1 DAY),DATE_ADD(CURRENT_DATE,INTERVAL + 1 DAY)) as next
-            FROM pegawai p 
+            FROM pegawai p
             LEFT JOIN pegawai_rule pr ON pr.id_pegawai = p.id_perusahaan AND pr.id_koordinator = p.id_koordinator
             LEFT JOIN list_jadwal_shift ljs ON ljs.id_pegawai = p.id_perusahaan AND ljs.id_koordinator = p.id_koordinator
             LEFT JOIN list_shift ls ON ls.id_koordinator = p.id_koordinator AND ls.no_shift = ljs.no_shift
             LEFT JOIN tb_absen a ON a.id_pegawai = p.id_perusahaan AND a.id_koordinator = p.id_koordinator AND a.status in ('Pulang Lebih Awal') AND (
               CURRENT_DATE BETWEEN a.tgl_awal AND a.tgl_akhir OR CURRENT_DATE BETWEEN DATE_ADD(a.tgl_awal,INTERVAL -1 DAY) AND DATE_ADD(a.tgl_akhir,INTERVAL -1 DAY)
-            ) AND status_verifikasi like '%terima%' 
+            ) and a.status_verifikasi like '%terima%'
             LEFT JOIN list_event e ON e.id_pegawai = p.id_perusahaan AND e.id_koordinator = p.id_koordinator AND (
               CURRENT_DATE = e.tgl OR CURRENT_DATE = DATE_ADD(e.tgl,INTERVAL - 1 DAY)
             )
@@ -220,8 +243,8 @@ class DataAbsen {
             ORDER BY tgl DESC
           ) j
           ) f
-            WHERE DATE_FORMAT(CURRENT_TIMESTAMP,'%Y-%m-%d %H:%i') BETWEEN DATE_ADD(f.tIn,INTERVAL -2 HOUR) AND DATE_ADD(f.tOut,INTERVAL +6 HOUR )
-            LIMIT 1`
+          
+          where date_format(CURRENT_TIMESTAMP,"%Y-%m-%d %H:%i") between f.start and f.end limit 1`
         );
 
         if (rowJadwal[0].length > 0) {
@@ -229,21 +252,29 @@ class DataAbsen {
           try {
             var ab = await db2.query(
               `
-            SELECT
-              IFNULL(DATE_FORMAT(GROUP_CONCAT(IF(c.checktype=0, checktime,null)),'%H:%i'), 'Absen') as tIn,
-              IFNULL(DATE_FORMAT(GROUP_CONCAT(IF(c.checktype=1, checktime,null)),'%H:%i'),
-                IF(CURRENT_TIMESTAMP >= DATE_ADD(?,INTERVAL -6 HOUR) AND (c.checktype = 0 AND c.checktime != NULL), 'Absen', 'Tunggu')) as tOut,
+              SELECT 
+              IFNULL(DATE_FORMAT(GROUP_CONCAT(IF(c.checktype=0, checktime,null)),'%H:%i'), 'Absen') as tIn,  
+              IFNULL(DATE_FORMAT(GROUP_CONCAT(IF(c.checktype=1, checktime,null)),'%H:%i'), 
+                  IF(CURRENT_TIMESTAMP >= DATE_ADD('` +
+              jw.end +
+              `',INTERVAL -6 HOUR), 'Absen', 'Tunggu')) as tOut,
               IFNULL(GROUP_CONCAT(IF(c.checktype=0, koordinat,null)), '') corIn,
               IFNULL(GROUP_CONCAT(IF(c.checktype=1, koordinat,null)), '') corOut,
               SUBSTRING_INDEX(IFNULL(GROUP_CONCAT(IF(c.checktype=0, lokasi,null)), ''),',',1) locIn,
               SUBSTRING_INDEX(IFNULL(GROUP_CONCAT(IF(c.checktype=1, lokasi,null)), ''),',',1) locOut
             from userinfo u
             left join checkinout c on c.userid=u.userid
-            where
-              u.badgenumber= ?
-              and checktime BETWEEN ? and ?
-            `,
-              [jw.end, id, jw.start, jw.end]
+
+            where 
+              u.badgenumber= ` +
+              id +
+              `
+              and checktime BETWEEN '` +
+              jw.start +
+              `' and '` +
+              jw.end +
+              `'
+            `
             );
 
             initialResponse.dIn.time = ab[0][0].tIn;
@@ -252,7 +283,6 @@ class DataAbsen {
             initialResponse.dOut.location = ab[0][0].locOut;
 
             result.data = initialResponse;
-            console.log(result.data);
             return result;
           } catch (err) {
             if (err) {
@@ -340,26 +370,34 @@ class DataAbsen {
    * @param {String} location 
    * @returns 
    */
-  async check(id,koor,type,imageName,coordinates,location) {
-    let result = {error:false,data:null}
+  async check(id, koor, type, imageName, coordinates, location) {
+    let result = { error: false, data: null }
     try {
       const sn = await db.query(`select sn from pegawai_rule where id_pegawai = ${id}`)
-      const userid = await db2.query(`select from userinfo where badgenumber = ${id}`)
+      const userid = await db2.query(`select userid from userinfo where badgenumber = ${id}`)
+
+      console.log(userid[0]);
+      console.log(sn[0]);
 
       try {
-        await db2.query(`insert into checkinout set userid = ? , checktime = ? , checktype = ? , id_koordinator = ? , foto = ? , koordinat = ?,SN = ?,verifycode = 1, lokasi= ? `,
-        [userid[0][0].userid,this.getLocalIso(new Date()),type,koor,imageName,coordinates,sn[0][0].sn,location])
+        await db2.query(
+          `insert into checkinout set userid = ${userid[0][0].userid} , 
+          checktime = '${getLocalIso(new Date())}' ,
+          checktype = ${type} , 
+          id_koordinator = '${koor}' , 
+          foto = '${imageName}' , koordinat = '${coordinates}',SN = '${sn[0][0].sn}',verifycode = 1, lokasi= '${location}'`
+        )
         result.data = "Berhasil Melakukan absen"
         return result
       } catch (checkError) {
         result.error = true
-        result.data = checkError 
+        result.data = checkError
         return result
       }
     } catch (infoError) {
       result.error = true
-        result.data = checkError 
-        return result
+      result.data = infoError
+      return result
     }
   }
 
@@ -367,15 +405,15 @@ class DataAbsen {
    * id
    * @param {String} id 
    */
-  async checkLocation(id) {
-    let result = {error:false,data:null}
+  async checkLocation(id, lat, long) {
+    let result = { error: false, data: null }
     try {
       const location = await db.query(
         `
         select
         p.foto,
         r.name as lokasi_dinas,
-        ROUND(111.111	* DEGREES( ACOS( COS( RADIANS(lp.latitude1) ) * COS( RADIANS(-6.8911047) ) * COS( RADIANS(lp.longitude1) - RADIANS(107.5756415) ) + 	 SIN( RADIANS(lp.latitude1) ) * SIN( RADIANS(-6.8911047) ) ) ) * 1000, 2 ) AS jarak,
+        ROUND(111.111	* DEGREES( ACOS( COS( RADIANS(lp.latitude1) ) * COS( RADIANS(${lat}) ) * COS( RADIANS(lp.longitude1) - RADIANS(${long}) ) + 	 SIN( RADIANS(lp.latitude1) ) * SIN( RADIANS(${lat}) ) ) ) * 1000, 2 ) AS jarak,
         lp.lokasi as lokasi_absen
         from pegawai p left join tb_dinas td on p.id_perusahaan = td.id_karyawan and td.tgl_akhir >= CURRENT_DATE 
               AND td.status_approval = 'terima'
@@ -383,20 +421,21 @@ class DataAbsen {
               LEFT JOIN (
                 SELECT lokasi,SUBSTRING_INDEX(REPLACE(koordinat, ' ', ''), ',', 1) AS latitude1,SUBSTRING_INDEX(REPLACE(koordinat, ' ', ''), ',', -1) AS 				longitude1,id_koordinator FROM lokasi_perusahaan
               ) lp ON p.id_koordinator = lp.id_koordinator
-        where p.id_perusahaan = '${id}'
+        where p.id_perusahaan = ${id}
         HAVING jarak < 25;
         `
       )
 
-      result.data = location[0]
+      result.data = location[0][0]
       return result
     } catch (error) {
       result.data = error
       result.error = true
       return result
     }
-    
+
   }
+
 }
 
 module.exports = DataAbsen;

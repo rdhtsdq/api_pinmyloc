@@ -10,6 +10,7 @@ const dinas = require("../controller/dinasController");
 const other = require("../controller/otherController");
 const izin = require("../controller/izinController");
 const { checkToken } = require("./middleware");
+const storage = require("../utils/storage");
 
 // main path
 
@@ -17,6 +18,7 @@ router.post("/login", auth.auth);
 
 router.get("/absen/histori", checkToken, absen.getHistoriAbsensi);
 router.get("/absen/jadwal", checkToken, absen.getJadwalAbsensi);
+router.post("/absen/check", checkToken, storage.single("pict"), absen.check);
 
 router.get("/task/dashboard", checkToken, task.getDashboardTask);
 router.get("/task/all", checkToken, task.getTask);
