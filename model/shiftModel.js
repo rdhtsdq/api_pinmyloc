@@ -37,11 +37,36 @@ class ShiftModel {
     }
   }
 
-  async getOtherShift(id, koor, date) {
+  /**
+   * 
+   * @param {String} id 
+   * @param {String} koor 
+   * @param {String} date 
+   * @param {String} name 
+   * @returns 
+   */
+  async getOtherShift(id, koor, date, name = "") {
     let result = { error: false, data: null };
 
+    if (name != "") {
+      name = `and dp.nama like '%${name}%'`
+    }
+
     try {
-    } catch (e) {}
+      var shift = await db.query(`
+      SELECT s.jam_masuk,s.jam_keluar,ls.tgl,dp.nama FROM list_jadwal_shift ls LEFT JOIN list_shift s ON ls.no_shift = s.no_shift LEFT JOIN (
+        SELECT p.id_perusahaan as ids,p.nama,p.id_koordinator FROM pegawai p JOIN (
+        SELECT posisi,id_koordinator FROM pegawai where id_perusahaan = ${id} and id_koordinator = '${koor}'
+        ) p2 ON p.posisi = p2.posisi AND p.id_koordinator = p2.id_koordinator and p.status = 'Active'
+      ) dp ON ls.id_koordinator = dp.id_koordinator AND ls.id_pegawai = dp.ids 
+      WHERE tgl = '${date}' ${name}  GROUP BY ls.id_pegawai
+      `)
+      result.data = shift[0]
+      return result
+    } catch (e) {
+      result.data = e;
+      result.error = true
+    }
   }
 }
 

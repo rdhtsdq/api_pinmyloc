@@ -24,10 +24,14 @@ router.get("/task/dashboard", checkToken, task.getDashboardTask);
 router.get("/task/all", checkToken, task.getTask);
 
 router.get("/shift/myshift", checkToken, shift.getMyShift);
+router.get("/shift/otherShift", checkToken, shift.getOtherShift);
 
 router.get("/dinas/getDinas", checkToken, dinas.getDinas);
 
+
 router.get("/izin/type", checkToken, izin.getApproval);
+
+
 
 // other / components path
 
