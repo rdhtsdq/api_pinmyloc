@@ -30,22 +30,22 @@ const login = async (userid, password) => {
     result.data = error;
     return result;
   }
-
-  // await db
-  //   .query(``)
-  //   .then((res) => {
-  //     result.data = res[0];
-  //     console.log(result);
-  //     return result;
-  //   })
-  //   .catch((err) => {
-  //     if (err) {
-  //       result.error = true;
-  //       result.data = err;
-  //       console.log(result);
-  //       return result;
-  //     }
-  //   });
 };
 
-module.exports = { login };
+/**
+ * 
+ * @param {String} userid 
+ * @param {String} password 
+ */
+const changePassword = async (userid, password) => {
+  let result = { data: null, error: false }
+  try {
+    await db.query("update akun_pegawai set password = ? where id_perusahaan = ? and")
+  } catch (error) {
+    result.error = true
+    result.data = error
+    return result
+  }
+}
+
+module.exports = { login, changePassword };
