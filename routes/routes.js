@@ -9,6 +9,9 @@ const shift = require("../controller/shiftController");
 const dinas = require("../controller/dinasController");
 const other = require("../controller/otherController");
 const izin = require("../controller/izinController");
+const access = require("../controller/accessController")
+
+
 const { checkToken } = require("./middleware");
 const storage = require("../utils/storage");
 
@@ -31,7 +34,7 @@ router.get("/dinas/getDinas", checkToken, dinas.getDinas);
 
 router.get("/izin/type", checkToken, izin.getApproval);
 
-
+router.get("/access", checkToken, access.getAccess);
 
 // other / components path
 
